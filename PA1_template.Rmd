@@ -1,25 +1,122 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research: PA1"
+author: "Filip Floegel"
+date: "Saturday, January 17, 2015"
+output: html_document
 ---
 
+First I will set the working directory, loading data, loding the package plyr for ddply
 
-## Loading and preprocessing the data
+```{r, echo=TRUE}
+setwd("C:/Users/Filip/coursera/data science/Reproducible Research/RepData_PeerAssessment1")
+activity <- read.csv("./activity.csv", header=TRUE)
+library(plyr)
+```
+
+# What is mean total number of steps taken per day?
+first counting the nbr of steps each day
+
+```{r, echo=TRUE}
+nbr_steps_date <- ddply(activity, ~date, summarize, nbr_steps=sum(steps), mean_steps=mean(steps), med_steps=median(steps))
+with(nbr_steps_date,plot( date, nbr_steps, type="l"))
+```
+
+Now lets calc the mean of nbr of steps per day
+
+```{r, echo=TRUE}
+mean_steps <- mean(nbr_steps_date$nbr_steps, na.rm=TRUE)
+mean_steps
+```
+
+and the median of nbr of steps per day
+
+```{r, echo=TRUE}
+med_steps <- median(nbr_steps_date$nbr_steps, na.rm=TRUE)
+med_steps
+```
+
+# What is the average daily activity pattern?
+
+first the average. be aware of the missing values within steps
+
+```{r, echo=TRUE}
+avg_steps_int <- ddply(activity, ~interval, summarize, avg_steps=mean(steps, na.rm=TRUE), nbr_steps=sum(steps, na.rm=TRUE))
+```
+
+Now, lets take a library ggplot for a nice time series plot and plot the average steps per intervall for all dates 
+
+```{r, echo=TRUE}
+library(ggplot2)
+p <- ggplot(avg_steps_int, aes(x=interval, y=avg_steps))
+p + geom_line()
+```
+
+# Imputing missing values
+
+first counting the total nbr of rows with missing values by calculating the nbr of rows - the sumber of complete cases
+
+```{r, echo=TRUE}
+nrow(activity) - sum(complete.cases(activity))
+```
+
+use avg nbr of steps in nbr_steps_int in order to impute the missings steps. first step merge the two table using merge by interval
+
+```{r, echo=TRUE}
+act_imp <- merge(activity, avg_steps_int[,c("interval","avg_steps")], by.x="interval", all=TRUE)
+imp_steps <- apply(act_imp, 1,function(x) {ifelse(is.na(x["steps"]),round(as.numeric(x["avg_steps"])),as.numeric(x["steps"]))})
+activity$imp_steps <- imp_steps
+```
+
+### 4. total number of steps taken each day and...
+
+```{r, echo=TRUE}
+nbr_imp_steps_date <- ddply(activity, ~date, summarize, nbr_imp_steps=sum(imp_steps))
+```
+
+### 4. Calculate and report the mean and median total number of steps taken per day.
+
+first mean
+
+```{r, echo=TRUE}
+mean_imp_steps <- mean(nbr_imp_steps_date$nbr_imp_steps, na.rm=TRUE)
+mean_imp_steps
+```
+
+and the median of nbr of steps per day
+
+```{r, echo=TRUE}
+med_imp_steps <- median(nbr_imp_steps_date$nbr_imp_steps, na.rm=TRUE)
+med_imp_steps
+```
+
+### 4. Do these values differ from the estimates from the first part of the assignment? 
+
+```{r, echo=TRUE}
+mean_steps - mean_imp_steps
+med_steps - med_imp_steps
+```
+
+The mean of steps dont differs from the mean of imputed steps but the median does differ.
+
+### 4. Make a histogram of the total number of steps taken each day and...
+
+What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r, echo=TRUE}
+with(nbr_imp_steps_date,plot( date, nbr_imp_steps, type="l"))
+```
+
+well the total nbr of steps per day looks pretty much the same as the picture of the timeries above wich is for sure not right!
+
+her another check of the imputed new variable imP_steps... comparison with the timeseries plot!
+
+```{r, echo=TRUE}
+avg_imp_steps_int <- ddply(activity, ~interval, summarize, avg_steps=mean(imp_steps))
+p <- ggplot(avg_imp_steps_int, aes(x=interval, y=avg_steps))
+p + geom_line()
+```
+
+well, doesnt look the same at all :-(
 
 
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+# Are there differences in activity patterns between weekdays and weekends?
