@@ -1,0 +1,40 @@
+---
+title: "Reproducible Research: PA1"
+author: "Filip Floegel"
+date: "Saturday, January 17, 2015"
+output: html_document
+---
+
+First I will set the working directory, loading data, loding the package plyr for ddply
+
+```{r, echo=TRUE}
+setwd("C:/Users/Filip/coursera/data science/Reproducible Research/RepData_PeerAssessment1")
+activity <- read.csv("./activity.csv", header=TRUE)
+library(plyr)
+```
+
+# What is mean total number of steps taken per day?
+first counting the nbr of steps each day
+
+```{r, echo=TRUE}
+nbr_steps_date <- ddply(activity, ~date, summarize, nbr_steps=sum(steps), mean_steps=mean(steps), med_steps=median(steps))
+with(nbr_steps_date,plot( date, nbr_steps, type="l"))
+```
+
+Now lets calc the mean of nbr of steps per day
+
+```{r, echo=TRUE}
+mean(nbr_steps_date$nbr_steps, na.rm=TRUE)
+```
+
+and the median of nbr of steps per day
+
+```{r, echo=TRUE}
+median(nbr_steps_date$nbr_steps, na.rm=TRUE)
+```
+
+# What is the average daily activity pattern?
+
+# Imputing missing values
+
+# Are there differences in activity patterns between weekdays and weekends?
