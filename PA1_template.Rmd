@@ -1,5 +1,5 @@
 ---
-title: "Reproducible Research: PA1"
+title: 'Reproducible Research: PA1'
 author: "Filip Floegel"
 date: "Saturday, January 17, 2015"
 output: html_document
@@ -67,11 +67,33 @@ imp_steps <- apply(act_imp, 1,function(x) {ifelse(is.na(x["steps"]),round(as.num
 activity$imp_steps <- imp_steps
 ```
 
+here another imputation which look more promissing after all. average steps per date nstead of average steps per intervall
+
+```{r, echo=TRUE}
+avg_steps_date <- ddply(activity, ~date, summarize, freq=length(steps), nbr_steps=sum(steps, na.rm=TRUE))
+#head(avg_steps_date)
+avg_steps_date$avg_steps <- ifelse(avg_steps_date$nbr_steps >0, avg_steps_date$nbr_steps / avg_steps_date$freq, 0)
+#head(avg_steps_date)
+act_imp_date <- merge(activity, avg_steps_date[,c("date","avg_steps")], by.x="date", all=TRUE)
+#head(act_imp_date)
+imp_steps_date <- apply(act_imp_date, 1,function(x) {ifelse(is.na(x["steps"]),round(as.numeric(x["avg_steps"])),as.numeric(x["steps"]))})
+#head(imp_steps_date)
+activity$imp_steps_date <- imp_steps_date
+```
+
+
 ### 4. total number of steps taken each day and...
 
 ```{r, echo=TRUE}
 nbr_imp_steps_date <- ddply(activity, ~date, summarize, nbr_imp_steps=sum(imp_steps))
 ```
+
+and here with the other imputated variable
+
+```{r, echo=TRUE}
+nbr_imp_steps_date_date <- ddply(activity, ~date, summarize, nbr_imp_steps_date=sum(imp_steps_date))
+```
+
 
 ### 4. Calculate and report the mean and median total number of steps taken per day.
 
@@ -108,6 +130,14 @@ with(nbr_imp_steps_date,plot( date, nbr_imp_steps, type="l"))
 
 well the total nbr of steps per day looks pretty much the same as the picture of the timeries above wich is for sure not right!
 
+here with the other imputation where the average per date was used for imputation
+
+```{r, echo=TRUE}
+with(nbr_imp_steps_date_date,plot( date, nbr_imp_steps_date, type="l"))
+```
+
+looks much better!!!
+
 her another check of the imputed new variable imP_steps... comparison with the timeseries plot!
 
 ```{r, echo=TRUE}
@@ -116,7 +146,56 @@ p <- ggplot(avg_imp_steps_int, aes(x=interval, y=avg_steps))
 p + geom_line()
 ```
 
-well, doesnt look the same at all :-(
+well, doesnt look the same at all :-( but lets have a look at the other imp variable
 
+```{r, echo=TRUE}
+avg_imp_steps_date_int <- ddply(activity, ~interval, summarize, avg_steps=mean(imp_steps_date))
+p <- ggplot(avg_imp_steps_date_int, aes(x=interval, y=avg_steps))
+p + geom_line()
+```
+
+much better!!!
 
 # Are there differences in activity patterns between weekdays and weekends?
+
+first i construct the weekend flag using weekdays.
+second I aggregate the the average steps
+
+* original steps
+* imputed steps
+
+by the just constructed weekend flag w_flag and interval variable on the activity data
+
+```{r, echo=TRUE}
+activity$w_flag <- ifelse(weekdays(strptime(gsub("-","",as.character(activity$date)),"%Y%m%d")) %in% c("Samstag", "Sonntag"), "we", "wd")
+avg_steps_w_flag_int <- ddply(activity, ~w_flag*interval, summarize, avg_steps=mean(steps, na.rm=TRUE), nbr_steps=sum(steps, na.rm=TRUE))
+avg_imp_steps_w_flag_int <- ddply(activity, ~w_flag*interval, summarize, avg_steps=mean(imp_steps))
+```
+
+Now lets print the result with the original steps first using ggplot
+
+```{r, echo=TRUE}
+p <- ggplot(avg_steps_w_flag_int, aes(x=interval, y=avg_steps)) + geom_line()
+p + facet_grid(. ~ w_flag)
+```
+
+hm... what the hell are they doing at the morning. are they going to work? hm... where ist the second beat? I dont get it!
+
+And here with the step variable where missing values are imputed by the mean of the intervall at all
+
+```{r, echo=TRUE}
+p <- ggplot(avg_imp_steps_w_flag_int, aes(x=interval, y=avg_steps)) + geom_line()
+p + facet_grid(. ~ w_flag)
+```
+
+well looks not very differnt. I guess it is because of my imputation
+
+lets try the same with the other imputation
+
+```{r, echo=TRUE}
+avg_imp_steps_date_w_flag_int <- ddply(activity, ~w_flag*interval, summarize, avg_steps=mean(imp_steps_date))
+p <- ggplot(avg_imp_steps_date_w_flag_int, aes(x=interval, y=avg_steps)) + geom_line()
+p + facet_grid(. ~ w_flag)
+```
+
+well doesnt explain the first beat in week days but at least the data looks pretty similar to the picture two above
